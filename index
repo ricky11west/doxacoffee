@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Doxa Coffee Roasters — Finance Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --cream:      #F2EBD9;
+      --cream-dark: #E8DFC9;
+      --cream-card: #FAF5EA;
+      --brown:      #2D1207;
+      --brown-mid:  #4A2010;
+      --rust:       #8B3A2A;
+      --rust-light: #A84C3A;
+      --rust-pale:  #E8C4BB;
+      --gold:       #C4872A;
+      --green:      #4A7C59;
+      --green-light:#D4EAD9;
+      --red-soft:   #C0392B;
+      --red-light:  #FAD4D0;
+      --border:     rgba(45,18,7,0.12);
+      --font-serif: 'Playfair Display', Georgia, serif;
+      --font-sans:  'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--cream); font-family: var(--font-sans); color: var(--brown); min-height: 100vh; }
+ 
+    /* SIDEBAR */
+    .sidebar {
+      position: fixed; top: 0; left: 0;
+      width: 230px; height: 100vh;
+      background: var(--brown);
+      display: flex; flex-direction: column;
+      padding-bottom: 24px; z-index: 100; overflow-y: auto;
+    }
+    .sidebar-logo { padding: 26px 22px 22px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .sidebar-logo .star { color: #A84C3A; font-size: 18px; }
+    .sidebar-logo h1 { font-family: var(--font-serif); font-size: 19px; color: var(--cream); letter-spacing: 0.04em; line-height: 1.15; margin-top: 5px; }
+    .sidebar-logo p { font-size: 10px; color: rgba(242,235,217,0.4); letter-spacing: 0.18em; text-transform: uppercase; margin-top: 3px; }
+    .nav-label { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(242,235,217,0.3); padding: 18px 22px 6px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 22px; font-size: 13px; color: rgba(242,235,217,0.6); cursor: pointer; font-weight: 500; transition: all 0.15s; }
+    .nav-item:hover { background: rgba(255,255,255,0.07); color: var(--cream); }
+    .nav-item.active { background: var(--rust); color: var(--cream); border-right: 3px solid #A84C3A; }
+    .nav-item .icon { font-size: 14px; width: 18px; text-align: center; }
+    .sidebar-footer { margin-top: auto; padding: 16px 22px 0; border-top: 1px solid rgba(255,255,255,0.08); }
+    .sidebar-footer p { font-size: 10.5px; color: rgba(242,235,217,0.3); margin-top: 2px; }
+    .sidebar-footer strong { color: rgba(242,235,217,0.55); }
+ 
+    /* MAIN */
+    .main { margin-left: 230px; padding: 28px 32px; min-height: 100vh; }
+ 
+    /* TOPBAR */
+    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+    .topbar-left h2 { font-family: var(--font-serif); font-size: 24px; color: var(--brown); font-weight: 800; }
+    .topbar-left p { font-size: 12.5px; color: var(--rust); margin-top: 2px; font-weight: 600; }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .period-select { background: var(--cream-card); border: 1.5px solid var(--border); border-radius: 8px; padding: 8px 13px; font-size: 13px; color: var(--brown); font-family: var(--font-sans); font-weight: 600; cursor: pointer; outline: none; }
+    .export-btn { background: var(--rust); color: var(--cream); border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--font-sans); transition: background 0.15s; }
+    .export-btn:hover { background: #A84C3A; }
+ 
+    /* KPI GRID */
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+    .kpi-card { background: var(--cream-card); border: 1.5px solid var(--border); border-radius: 14px; padding: 20px 20px 16px; position: relative; overflow: hidden; }
+    .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--rust); }
+    .kpi-card.green::before  { background: var(--green); }
+    .kpi-card.gold::before   { background: var(--gold); }
+    .kpi-card.brown::before  { background: var(--brown-mid); }
+    .kpi-star { position: absolute; right: 14px; bottom: 10px; font-size: 58px; opacity: 0.04; pointer-events: none; user-select: none; line-height: 1; }
+    .kpi-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(45,18,7,0.45); margin-bottom: 7px; }
+    .kpi-value { font-family: var(--font-serif); font-size: 28px; font-weight: 700; color: var(--brown); line-height: 1; }
+    .kpi-sub { font-size: 11.5px; margin-top: 9px; display: flex; align-items: center; gap: 5px; font-weight: 500; }
+    .badge { padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 700; }
+    .badge-up      { background: var(--green-light); color: var(--green); }
+    .badge-down    { background: var(--red-light);   color: var(--red-soft); }
+    .badge-neutral { background: var(--cream-dark);  color: rgba(45,18,7,0.45); }
+    .sub-muted { color: rgba(45,18,7,0.4); }
+ 
+    /* CHART CARDS */
+    .charts-row { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .chart-card { background: var(--cream-card); border: 1.5px solid var(--border); border-radius: 14px; padding: 22px; }
+    .chart-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 18px; }
+    .chart-title { font-family: var(--font-serif); font-size: 15px; font-weight: 700; color: var(--brown); }
+    .chart-subtitle { font-size: 11.5px; color: rgba(45,18,7,0.4); margin-top: 2px; }
+    .legend { display: flex; gap: 12px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 500; color: rgba(45,18,7,0.55); }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+ 
+    /* LOCATION ROW */
+    .location-row { display: grid; grid-template-columns: 1fr 1fr 1.15fr; gap: 16px; margin-bottom: 20px; }
+    .location-card { background: var(--cream-card); border: 1.5px solid var(--border); border-radius: 14px; padding: 20px; }
+    .location-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .location-name { font-family: var(--font-serif); font-size: 14.5px; font-weight: 700; }
+    .location-tag { font-size: 9.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; padding: 3px 9px; border-radius: 99px; }
+    .tag-truck { background: var(--rust-pale); color: var(--rust); }
+    .loc-metric { margin-bottom: 11px; }
+    .loc-metric-label { font-size: 10px; color: rgba(45,18,7,0.4); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px; }
+    .loc-metric-value { font-family: var(--font-serif); font-size: 21px; font-weight: 700; }
+    .prog-wrap { margin-top: 11px; }
+    .prog-label { display: flex; justify-content: space-between; font-size: 10.5px; color: rgba(45,18,7,0.45); margin-bottom: 4px; font-weight: 600; }
+    .prog-bar { height: 6px; background: var(--cream-dark); border-radius: 99px; overflow: hidden; }
+    .prog-fill { height: 100%; border-radius: 99px; }
+ 
+    /* BOTTOM ROW */
+    .bottom-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(45,18,7,0.38); padding: 0 10px 11px; text-align: left; border-bottom: 1px solid var(--border); }
+    tbody tr { border-bottom: 1px solid rgba(45,18,7,0.06); transition: background 0.1s; }
+    tbody tr:hover { background: rgba(45,18,7,0.03); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody td { padding: 10px 10px; font-size: 12.5px; }
+    .td-item { font-weight: 600; color: var(--brown); }
+    .td-cat  { font-size: 10.5px; color: rgba(45,18,7,0.38); margin-top: 1px; }
+    .td-num  { font-weight: 700; text-align: right; white-space: nowrap; }
+    .mini-bar { height: 5px; background: var(--cream-dark); border-radius: 99px; margin-top: 2px; }
+    .mini-fill { height: 5px; border-radius: 99px; }
+    .exp-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid rgba(45,18,7,0.07); font-size: 12.5px; }
+    .exp-row:last-child { border-bottom: none; }
+    .exp-left { display: flex; align-items: center; gap: 8px; }
+    .exp-dot  { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .exp-label { font-weight: 600; }
+    .exp-pct  { font-size: 10.5px; color: rgba(45,18,7,0.38); margin-top: 1px; }
+    .exp-amount { font-weight: 700; }
+ 
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-thumb { background: var(--rust-pale); border-radius: 99px; }
+  </style>
+</head>
+<body>
+ 
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="star">&#10035;</div>
+    <h1>DOXA<br>COFFEE</h1>
+    <p>Finance Dashboard</p>
+  </div>
+  <div class="nav-label">Overview</div>
+  <div class="nav-item active"><span class="icon">&#9638;</span> Dashboard</div>
+  <div class="nav-item"><span class="icon">&#8599;</span> Revenue</div>
+  <div class="nav-item"><span class="icon">&#8601;</span> Expenses</div>
+  <div class="nav-label">Locations</div>
+  <div class="nav-item"><span class="icon">&#128666;</span> Truck &middot; Main St</div>
+  <div class="nav-item"><span class="icon">&#128666;</span> Truck &middot; Riverside</div>
+  <div class="nav-item"><span class="icon">&#9749;</span> Caf&eacute; &middot; Downtown</div>
+  <div class="nav-label">Reports</div>
+  <div class="nav-item"><span class="icon">&#9641;</span> P&amp;L Statement</div>
+  <div class="nav-item"><span class="icon">&#9643;</span> Cash Flow</div>
+  <div class="nav-item"><span class="icon">&#11042;</span> Tax Summary</div>
+  <div class="sidebar-footer">
+    <p>Fiscal Year <strong>2025&ndash;26</strong></p>
+    <p>Last sync: <strong>Today, 8:41 AM</strong></p>
+  </div>
+</aside>
+ 
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <h2>Financial Overview</h2>
+      <p>&#10035; All three locations &nbsp;&middot;&nbsp; March 2026</p>
+    </div>
+    <div class="topbar-right">
+      <select class="period-select">
+        <option>March 2026</option>
+        <option>February 2026</option>
+        <option>Q1 2026</option>
+        <option>Full Year 2025</option>
+      </select>
+      <button class="export-btn">&#8595; Export PDF</button>
+    </div>
+  </div>
+ 
+  <!-- KPI ROW 1 -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-star">&#10035;</div>
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-value">$84,320</div>
+      <div class="kpi-sub"><span class="badge badge-up">&#8593; 14.2%</span><span class="sub-muted">vs last month</span></div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-star">&#10035;</div>
+      <div class="kpi-label">Gross Profit</div>
+      <div class="kpi-value">$51,438</div>
+      <div class="kpi-sub"><span class="badge badge-up">61.0%</span><span class="sub-muted">margin</span></div>
+    </div>
+    <div class="kpi-card gold">
+      <div class="kpi-star">&#10035;</div>
+      <div class="kpi-label">Net Income</div>
+      <div class="kpi-value">$18,750</div>
+      <div class="kpi-sub"><span class="badge badge-up">&#8593; 8.5%</span><span class="sub-muted">vs last month</span></div>
+    </div>
+    <div class="kpi-card brown">
+      <div class="kpi-star">&#10035;</div>
+      <div class="kpi-label">Avg. Ticket</div>
+      <div class="kpi-value">$12.40</div>
+      <div class="kpi-sub"><span class="badge badge-up">&#8593; $0.80</span><span class="sub-muted">vs last month</span></div>
+    </div>
+  </div>
+ 
+  <!-- KPI ROW 2 -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Transactions</div>
+      <div class="kpi-value">6,800</div>
+      <div class="kpi-sub"><span class="badge badge-neutral">~219 / day avg</span></div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Cost of Goods</div>
+      <div class="kpi-value">$32,882</div>
+      <div class="kpi-sub"><span class="badge badge-down">39.0%</span><span class="sub-muted">of revenue</span></div>
+    </div>
+    <div class="kpi-card gold">
+      <div class="kpi-label">Operating Expenses</div>
+      <div class="kpi-value">$32,688</div>
+      <div class="kpi-sub"><span class="badge badge-neutral">38.8%</span><span class="sub-muted">of revenue</span></div>
+    </div>
+    <div class="kpi-card brown">
+      <div class="kpi-label">YTD Revenue</div>
+      <div class="kpi-value">$231,490</div>
+      <div class="kpi-sub"><span class="badge badge-up">&#8593; 22.1%</span><span class="sub-muted">vs prior year</span></div>
+    </div>
+  </div>
+ 
+  <!-- CHARTS ROW -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Monthly Revenue &amp; Profit</div>
+          <div class="chart-subtitle">All locations combined &middot; Last 12 months</div>
+        </div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#8B3A2A"></div>Revenue</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#4A7C59"></div>Gross Profit</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#C4872A"></div>Net Income</div>
+        </div>
+      </div>
+      <canvas id="revenueChart" height="200"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Revenue Split</div>
+          <div class="chart-subtitle">By location &middot; March</div>
+        </div>
+      </div>
+      <canvas id="locationChart" height="180"></canvas>
+      <div style="margin-top:14px">
+        <div class="exp-row">
+          <div class="exp-left"><div class="exp-dot" style="background:#8B3A2A"></div><div><div class="exp-label">Truck &middot; Main St</div></div></div>
+          <div style="text-align:right"><div class="exp-amount">$38,240</div><div class="exp-pct">45%</div></div>
+        </div>
+        <div class="exp-row">
+          <div class="exp-left"><div class="exp-dot" style="background:#C4872A"></div><div><div class="exp-label">Truck &middot; Riverside</div></div></div>
+          <div style="text-align:right"><div class="exp-amount">$27,970</div><div class="exp-pct">33%</div></div>
+        </div>
+        <div class="exp-row" style="border:none">
+          <div class="exp-left"><div class="exp-dot" style="background:#4A2010"></div><div><div class="exp-label">Caf&eacute; &middot; Downtown</div></div></div>
+          <div style="text-align:right"><div class="exp-amount">$18,110</div><div class="exp-pct">22%</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- LOCATION ROW -->
+  <div class="location-row">
+    <div class="location-card">
+      <div class="location-header">
+        <div class="location-name">Truck &middot; Main St</div>
+        <div class="location-tag tag-truck">Food Truck</div>
+      </div>
+      <div class="loc-metric">
+        <div class="loc-metric-label">Monthly Revenue</div>
+        <div class="loc-metric-value">$38,240</div>
+      </div>
+      <div class="loc-metric">
+        <div class="loc-metric-label">Net Income</div>
+        <div class="loc-metric-value" style="color:#4A7C59">$9,280</div>
+      </div>
+      <div class="prog-wrap">
+        <div class="prog-label"><span>vs Goal ($40K)</span><span>95%</span></div>
+        <div class="prog-bar"><div class="prog-fill" style="width:95%;background:#8B3A2A"></div></div>
+      </div>
+      <div class="prog-wrap">
+        <div class="prog-label"><span>Net Margin</span><span>24.3%</span></div>
+        <div class="prog-bar"><div class="prog-fill" style="width:49%;background:#4A7C59"></div></div>
+      </div>
+      <div class="prog-wrap">
+        <div class="prog-label"><span>Avg Ticket</span><span>$13.20</span></div>
+        <div class="prog-bar"><div class="prog-fill" style="width:66%;background:#C4872A"></div></div>
+      </div>
+    </div>
+    <div class="location-card">
+      <div class="location-header">
+        <div class="location-name">Truck &middot; Riverside</div>
+        <div class="location-tag tag-truck">Food Truck</div>
+      </div>
+      <div class="loc-metric">
+        <div class="loc-metric-label">Monthly Revenue</div>
+        <div class="loc-metric-value">$27,970</div>
+      </div>
+      <div class="loc-metric">
+        <div class="loc-metric-label">Net Income</div>
+        <div class="loc-metric-value" style="color:#4A7C59">$6,450</div>
+      </div>
+      <div class="prog-wrap">
+        <div class="prog-label"><span>vs Goal ($36K)</span><span>78%</span></div>
+        <div class="prog-bar"><div class="prog-fill" style="width:78%;background:#C4872A"></div></div>
+      </div>
+      <div class="prog-wrap">
+        <div class="prog-label"><span>Net Margin</span><span>23.1%</span></div>
+        <div class="prog-bar"><div class="prog-fill" style="width:46%;background:#4A7C59"></div></div>
+      </div>
+      <div class="prog-wrap">
+        <div class="prog-label"><span>Avg Ticket</span><span>$11.80</span></div>
+        <div class="prog-bar"><div class="prog-fill" style="width:59%;background:#3A7CA5"></div></div>
+      </div>
+    </div>
+    <div class="location-card">
+      <div class="chart-header" style="margin-bottom:14px">
+        <div>
+          <div class="chart-title">Sales by Category</div>
+          <div class="chart-subtitle">All locations &middot; March</div>
+        </div>
+      </div>
+      <canvas id="categoryChart" height="200"></canvas>
+    </div>
+  </div>
+ 
+  <!-- BOTTOM ROW -->
+  <div class="bottom-row">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Top Selling Items</div>
+          <div class="chart-subtitle">Ranked by revenue &middot; March 2026</div>
+        </div>
+        <div style="font-size:12px;color:#8B3A2A;font-weight:700;cursor:pointer">View all &rarr;</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:28px">#</th>
+            <th>Item</th>
+            <th style="text-align:right">Units</th>
+            <th style="text-align:right">Revenue</th>
+            <th style="width:90px">Share</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:#8B3A2A;font-weight:800;font-size:14px">1</td>
+            <td><div class="td-item">Signature Latte</div><div class="td-cat">Espresso Drinks</div></td>
+            <td class="td-num">1,840</td><td class="td-num">$14,720</td>
+            <td><div class="mini-bar"><div class="mini-fill" style="width:100%;background:#8B3A2A"></div></div></td>
+          </tr>
+          <tr>
+            <td style="color:#C4872A;font-weight:800;font-size:14px">2</td>
+            <td><div class="td-item">Oat Milk Cortado</div><div class="td-cat">Espresso Drinks</div></td>
+            <td class="td-num">1,210</td><td class="td-num">$10,890</td>
+            <td><div class="mini-bar"><div class="mini-fill" style="width:74%;background:#C4872A"></div></div></td>
+          </tr>
+          <tr>
+            <td style="color:#4A2010;font-weight:800;font-size:14px">3</td>
+            <td><div class="td-item">Cold Brew</div><div class="td-cat">Cold Drinks</div></td>
+            <td class="td-num">990</td><td class="td-num">$8,415</td>
+            <td><div class="mini-bar"><div class="mini-fill" style="width:57%;background:#4A2010"></div></div></td>
+          </tr>
+          <tr>
+            <td style="font-weight:700">4</td>
+            <td><div class="td-item">Drip Coffee</div><div class="td-cat">Brewed Coffee</div></td>
+            <td class="td-num">1,560</td><td class="td-num">$7,800</td>
+            <td><div class="mini-bar"><div class="mini-fill" style="width:53%;background:#4A7C59"></div></div></td>
+          </tr>
+          <tr>
+            <td style="font-weight:700">5</td>
+            <td><div class="td-item">Avocado Toast</div><div class="td-cat">Food</div></td>
+            <td class="td-num">620</td><td class="td-num">$7,440</td>
+            <td><div class="mini-bar"><div class="mini-fill" style="width:51%;background:#3A7CA5"></div></div></td>
+          </tr>
+          <tr>
+            <td style="font-weight:700">6</td>
+            <td><div class="td-item">Matcha Latte</div><div class="td-cat">Specialty Drinks</div></td>
+            <td class="td-num">540</td><td class="td-num">$6,480</td>
+            <td><div class="mini-bar"><div class="mini-fill" style="width:44%;background:#8B3A2A;opacity:0.5"></div></div></td>
+          </tr>
+          <tr>
+            <td style="font-weight:700">7</td>
+            <td><div class="td-item">Whole Bean Bags</div><div class="td-cat">Retail</div></td>
+            <td class="td-num">210</td><td class="td-num">$5,250</td>
+            <td><div class="mini-bar"><div class="mini-fill" style="width:36%;background:#C4872A"></div></div></td>
+          </tr>
+          <tr>
+            <td style="font-weight:700">8</td>
+            <td><div class="td-item">Breakfast Sandwich</div><div class="td-cat">Food</div></td>
+            <td class="td-num">480</td><td class="td-num">$4,800</td>
+            <td><div class="mini-bar"><div class="mini-fill" style="width:33%;background:#4A7C59"></div></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Expense Breakdown</div>
+          <div class="chart-subtitle">Operating costs &middot; March 2026</div>
+        </div>
+      </div>
+      <canvas id="expenseChart" height="200"></canvas>
+      <div style="margin-top:14px">
+        <div class="exp-row">
+          <div class="exp-left"><div class="exp-dot" style="background:#8B3A2A"></div><div><div class="exp-label">Labor &amp; Wages</div><div class="exp-pct">38.4%</div></div></div>
+          <div class="exp-amount">$12,552</div>
+        </div>
+        <div class="exp-row">
+          <div class="exp-left"><div class="exp-dot" style="background:#4A2010"></div><div><div class="exp-label">Cost of Goods</div><div class="exp-pct">25.2%</div></div></div>
+          <div class="exp-amount">$8,236</div>
+        </div>
+        <div class="exp-row">
+          <div class="exp-left"><div class="exp-dot" style="background:#C4872A"></div><div><div class="exp-label">Truck Operations</div><div class="exp-pct">16.8%</div></div></div>
+          <div class="exp-amount">$5,491</div>
+        </div>
+        <div class="exp-row">
+          <div class="exp-left"><div class="exp-dot" style="background:#3A7CA5"></div><div><div class="exp-label">Marketing &amp; Events</div><div class="exp-pct">10.5%</div></div></div>
+          <div class="exp-amount">$3,432</div>
+        </div>
+        <div class="exp-row" style="border:none">
+          <div class="exp-left"><div class="exp-dot" style="background:#4A7C59"></div><div><div class="exp-label">Misc &amp; Admin</div><div class="exp-pct">9.1%</div></div></div>
+          <div class="exp-amount">$2,977</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+ 
+<script>
+  var RUST='#8B3A2A',GREEN='#4A7C59',GOLD='#C4872A',BROWN='#4A2010',BLUE='#3A7CA5',CREAM='#F2EBD9';
+  Chart.defaults.font.family="'Inter',-apple-system,sans-serif";
+  Chart.defaults.font.size=12;
+  Chart.defaults.color='rgba(45,18,7,0.48)';
+ 
+  new Chart(document.getElementById('revenueChart'),{
+    type:'line',
+    data:{
+      labels:['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'],
+      datasets:[
+        {label:'Revenue',data:[58200,61400,66800,72100,69300,74500,78200,67300,71800,69500,73800,84320],borderColor:RUST,backgroundColor:'rgba(139,58,42,0.09)',borderWidth:2.5,fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:RUST},
+        {label:'Gross Profit',data:[34200,36800,40100,44500,41900,45800,48200,40100,43900,42100,45100,51438],borderColor:GREEN,backgroundColor:'transparent',borderWidth:2,tension:0.4,pointRadius:3,pointBackgroundColor:GREEN},
+        {label:'Net Income',data:[10400,11200,12900,15200,13800,15900,16700,12800,14200,13500,17280,18750],borderColor:GOLD,backgroundColor:'transparent',borderWidth:2,tension:0.4,pointRadius:3,pointBackgroundColor:GOLD,borderDash:[5,3]}
+      ]
+    },
+    options:{
+      responsive:true,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#2D1207',titleColor:CREAM,bodyColor:'rgba(242,235,217,0.75)',padding:12,callbacks:{label:function(c){return' '+c.dataset.label+': $'+c.parsed.y.toLocaleString()}}}},
+      scales:{x:{grid:{display:false},border:{display:false}},y:{grid:{color:'rgba(45,18,7,0.06)'},border:{display:false},ticks:{callback:function(v){return'$'+(v/1000).toFixed(0)+'k'}}}}
+    }
+  });
+ 
+  new Chart(document.getElementById('locationChart'),{
+    type:'doughnut',
+    data:{
+      labels:['Truck Main St','Truck Riverside','Cafe Downtown'],
+      datasets:[{data:[38240,27970,18110],backgroundColor:[RUST,GOLD,BROWN],borderColor:CREAM,borderWidth:3,hoverOffset:6}]
+    },
+    options:{cutout:'68%',plugins:{legend:{display:false},tooltip:{backgroundColor:'#2D1207',titleColor:CREAM,bodyColor:'rgba(242,235,217,0.75)',padding:12,callbacks:{label:function(c){return' $'+c.parsed.toLocaleString()+' ('+Math.round(c.parsed/84320*100)+'%)'}}}}}
+  });
+ 
+  new Chart(document.getElementById('categoryChart'),{
+    type:'bar',
+    data:{
+      labels:['Espresso','Cold','Brewed','Food','Specialty','Retail'],
+      datasets:[{data:[25610,12200,9800,16400,9560,5250],backgroundColor:[RUST,BLUE,BROWN,GREEN,GOLD,'#7B5EA7'],borderRadius:6,borderSkipped:false}]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#2D1207',titleColor:CREAM,bodyColor:'rgba(242,235,217,0.75)',padding:10,callbacks:{label:function(c){return' $'+c.parsed.y.toLocaleString()}}}},
+      scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'rgba(45,18,7,0.06)'},border:{display:false},ticks:{callback:function(v){return'$'+(v/1000).toFixed(0)+'k'},font:{size:11}}}}
+    }
+  });
+ 
+  new Chart(document.getElementById('expenseChart'),{
+    type:'doughnut',
+    data:{
+      labels:['Labor & Wages','Cost of Goods','Truck Operations','Marketing','Misc & Admin'],
+      datasets:[{data:[12552,8236,5491,3432,2977],backgroundColor:[RUST,BROWN,GOLD,BLUE,GREEN],borderColor:CREAM,borderWidth:3,hoverOffset:6}]
+    },
+    options:{cutout:'62%',plugins:{legend:{display:false},tooltip:{backgroundColor:'#2D1207',titleColor:CREAM,bodyColor:'rgba(242,235,217,0.75)',padding:12,callbacks:{label:function(c){return' $'+c.parsed.toLocaleString()}}}}}
+  });
+</script>
+</body>
+</html>
